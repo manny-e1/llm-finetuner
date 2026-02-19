@@ -15,8 +15,6 @@ onnxruntime-genai==0.5.2
 optimum
 unsloth==2025.3.8
 unsloth_zoo==2025.3.7
-unsloth
-unsloth_zoo
 xformers
 qwen-vl-utils==0.0.10
 llama-index==0.12.22

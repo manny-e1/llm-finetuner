@@ -58,6 +58,7 @@ RUN mkdir -p /app/lancedb
 
 # Copy requirements first for caching
 COPY requirements.txt .
+RUN pip install --upgrade pip setuptools wheel
 RUN pip install -r requirements.txt 
 RUN pip install olive-ai[ort-genai,auto-opt]
 RUN pip install --upgrade bitsandbytes
@@ -81,6 +82,10 @@ EXPOSE 5000
 ENV PYTHONUNBUFFERED=1
 ENV FLASK_APP=app.py
 ENV FLASK_ENV=development
+ENV MILVUS_URI ""
+ENV MILVUS_TOKEN ""
+ENV MILVUS_COLLECTION_PREFIX "tenant_vectors"
+ENV MILVUS_DIM "1024"
 ENV LANCEDB_URI ""
 ENV LANCEDB_API_KEY ""
 ENV LANCE_API_KEY ""
