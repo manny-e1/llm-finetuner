@@ -10,7 +10,7 @@ WORKDIR /app
 #     poppler-utils \
 #     && rm -rf /var/lib/apt/lists/*
 
-RUN apt-get update -o Acquire::Retries=3 --allow-releaseinfo-change && apt-get install -y --no-install-recommends \
+RUN apt-get update && apt-get install -y --no-install-recommends \
     git \
     build-essential \
     poppler-utils \
@@ -38,7 +38,7 @@ RUN apt-get update -o Acquire::Retries=3 --allow-releaseinfo-change && apt-get i
     libgbm1 \
     libasound2 \
     libpangocairo-1.0-0 && \
-    apt-get clean && rm -rf /var/lib/apt/lists/*
+    rm -rf /var/lib/apt/lists/*
 
 # Install Google Chrome the proper way using keyring (replaces old apt-key/deb method)
 RUN mkdir -p /etc/apt/keyrings && \
@@ -58,7 +58,6 @@ RUN mkdir -p /app/lancedb
 
 # Copy requirements first for caching
 COPY requirements.txt .
-RUN pip install --upgrade pip setuptools wheel
 RUN pip install -r requirements.txt 
 RUN pip install olive-ai[ort-genai,auto-opt]
 RUN pip install --upgrade bitsandbytes
