@@ -10,7 +10,7 @@ WORKDIR /app
 #     poppler-utils \
 #     && rm -rf /var/lib/apt/lists/*
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
+RUN apt-get update -o Acquire::Retries=3 --allow-releaseinfo-change && apt-get install -y --no-install-recommends \
     git \
     build-essential \
     poppler-utils \
@@ -38,7 +38,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libgbm1 \
     libasound2 \
     libpangocairo-1.0-0 && \
-    rm -rf /var/lib/apt/lists/*
+    apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Install Google Chrome the proper way using keyring (replaces old apt-key/deb method)
 RUN mkdir -p /etc/apt/keyrings && \
