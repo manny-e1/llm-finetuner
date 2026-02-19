@@ -1,0 +1,84 @@
+import os
+from flask import Flask, request, jsonify
+from flask_sqlalchemy import SQLAlchemy
+from flask_migrate import Migrate
+from flask_cors import CORS
+from dotenv import load_dotenv
+from datetime import datetime, timezone
+
+# Load environment variables
+load_dotenv()
+
+# Initialize database
+db = SQLAlchemy()
+
+class Tenant(db.Model):
+    __tablename__ = 'tenants'
+    id = db.Column(db.Integer, primary_key=True)
+    key = db.Column(db.String(255), unique=True, nullable=False)
+    name = db.Column(db.String(255), nullable=True)
+    created_at = db.Column(db.DateTime, nullable=True, default=lambda: datetime.now(tz=timezone.utc))
+
+class Run(db.Model):
+    __tablename__ = 'runs'
+    id = db.Column(db.Integer, primary_key=True)
+    status = db.Column(db.String(50), nullable=True)
+    podcast_id = db.Column(db.String(255), nullable=True)
+    fired = db.Column(db.Boolean, default=False)
+    is_llm = db.Column(db.Boolean, default=False, nullable=True)
+    is_agent = db.Column(db.Boolean, default=False, nullable=True)
+    
+    user_id = db.Column(db.Integer, nullable=True)
+    tenant_id = db.Column(db.Integer, db.ForeignKey('tenants.id'), nullable=True)
+    model_name = db.Column(db.String(255), nullable=True)
+    model_type = db.Column(db.String(255), nullable=True)
+    description = db.Column(db.Text, nullable=True)
+    created_at = db.Column(db.DateTime, nullable=True, default=lambda: datetime.now(tz=timezone.utc))
+    updated_at = db.Column(db.DateTime, nullable=True, default=lambda: datetime.now(tz=timezone.utc), onupdate=lambda: datetime.now(tz=timezone.utc))
+    peft_r = db.Column(db.Integer, nullable=True)
+    peft_alpha = db.Column(db.Integer, nullable=True)
+    peft_dropout = db.Column(db.Float, nullable=True)
+
+class User(db.Model):
+    __tablename__ = 'users'
+    id = db.Column(db.Integer, primary_key=True)
+    email = db.Column(db.String(255), unique=True, nullable=False)
+    name = db.Column(db.String(255))
+    picture = db.Column(db.String(255))
+    run_id = db.Column(db.Integer, db.ForeignKey('runs.id'), nullable=True)
+    tenant_id = db.Column(db.Integer, db.ForeignKey('tenants.id'), nullable=True)
+
+    run = db.relationship('Run', backref='user', lazy='joined', uselist=False)
+
+class DocumentSource(db.Model):
+    __tablename__ = 'document_sources'
+    id = db.Column(db.Integer, primary_key=True)
+    tenant_id = db.Column(db.Integer, db.ForeignKey('tenants.id'), nullable=False)
+    source_id = db.Column(db.String(255), nullable=False)
+    source_type = db.Column(db.String(50), nullable=False)
+    created_at = db.Column(db.DateTime, nullable=True, default=lambda: datetime.now(tz=timezone.utc))
+    updated_at = db.Column(db.DateTime, nullable=True, default=lambda: datetime.now(tz=timezone.utc), onupdate=lambda: datetime.now(tz=timezone.utc))
+
+class DocumentChunk(db.Model):
+    __tablename__ = 'document_chunks'
+    id = db.Column(db.Integer, primary_key=True)
+    tenant_id = db.Column(db.Integer, db.ForeignKey('tenants.id'), nullable=False)
+    source_id = db.Column(db.String(255), nullable=False)
+    chunk_id = db.Column(db.Integer, nullable=False)
+    version = db.Column(db.Integer, nullable=False, default=1)
+    content_hash = db.Column(db.String(64), nullable=False)
+    created_at = db.Column(db.DateTime, nullable=True, default=lambda: datetime.now(tz=timezone.utc))
+
+def create_app():
+    # Initialize Flask app
+    app = Flask(__name__)
+    CORS(app, resources={r"/api/*": {"origins": "*"}})
+    # Load configuration
+    app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL')
+    app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+    # Initialize database and migration tools
+    db.init_app(app)
+    Migrate(app, db)
+
+    return app
