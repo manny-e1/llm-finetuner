@@ -81,15 +81,7 @@ EXPOSE 5000
 ENV PYTHONUNBUFFERED=1
 ENV FLASK_APP=app.py
 ENV FLASK_ENV=development
-ENV MILVUS_URI ""
-ENV MILVUS_TOKEN ""
-ENV MILVUS_COLLECTION_PREFIX "tenant_vectors"
-ENV MILVUS_DIM "1024"
-ENV LANCEDB_URI ""
-ENV LANCEDB_API_KEY ""
-ENV LANCE_API_KEY ""
-ENV LANCE_URI ""
-RUN unset LANCE_API_KEY
+ENV LANCEDB_URI "./lancedb"
 
 # Use flask run to enable debugging
 CMD ["flask", "run", "--host=0.0.0.0", "--port=5000", "--debug"]

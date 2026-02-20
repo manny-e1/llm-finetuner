@@ -4,7 +4,7 @@ from unsloth import FastLanguageModel, FastVisionModel
 from pdf2image import convert_from_path
 from transformers import TextStreamer
 from llama_index.core import VectorStoreIndex, SimpleDirectoryReader, StorageContext, Document
-from llama_index.vector_stores.milvus import MilvusVectorStore
+from llama_index.vector_stores.lancedb import LanceDBVectorStore
 from llama_index.embeddings.huggingface import HuggingFaceEmbedding
 from llama_index.readers.file.slides import PptxReader
 from llama_index.readers.file.tabular import CSVReader
@@ -27,14 +27,7 @@ from transformers import TextIteratorStreamer
 
 
 log_file_path = "model_logs.txt"
-MILVUS_URI = os.getenv("MILVUS_URI", "http://localhost:19530")
-MILVUS_TOKEN = os.getenv("MILVUS_TOKEN")
-MILVUS_COLLECTION_PREFIX = os.getenv("MILVUS_COLLECTION_PREFIX", "tenant_vectors")
-MILVUS_DIM = int(os.getenv("MILVUS_DIM", "1024"))
-
-def _sanitize_collection_part(value: str):
-    cleaned = re.sub(r"[^a-zA-Z0-9_]", "_", value or "default")
-    return cleaned[:60] if cleaned else "default"
+LANCEDB_URI = os.getenv("LANCEDB_URI", "./lancedb")
 MODEL = None
 TOKENIZER = None
 RETRIEVER = None
@@ -108,9 +101,6 @@ def initialize_model(model_id: str, checkpoint_root: str = "./model_cp", separat
     except:
         model_name = model_id
 
-    safe_tenant = _sanitize_collection_part(str(tenant_id))
-    safe_model = _sanitize_collection_part(str(model_id))
-    collection_name = f"{MILVUS_COLLECTION_PREFIX}_{safe_tenant}_{safe_model}"
     retriever = build_retriever(
         separator=separator,
         chunk_size=chunk_size,
@@ -118,8 +108,7 @@ def initialize_model(model_id: str, checkpoint_root: str = "./model_cp", separat
         replace_spaces=replace_spaces,
         delete_urls=delete_urls,
         ocr_model=ocr_model,
-        gpt_api_key=gpt_api_key,
-        collection_name=collection_name
+        gpt_api_key=gpt_api_key
     )
 
     print(f"Loading model from: {model_name}")
@@ -142,7 +131,7 @@ def format_data_inference(user_input, conversation_history, system_prompt):
     )
     return formatted_prompt.strip()
 
-def build_retriever(separator=" ", chunk_size=4096, chunk_overlap=50, replace_spaces=False, delete_urls=False, ocr_model='Qwen2.5VL', gpt_api_key=None, collection_name=None):
+def build_retriever(separator=" ", chunk_size=4096, chunk_overlap=50, replace_spaces=False, delete_urls=False, ocr_model='Qwen2.5VL', gpt_api_key=None):
     # Load documents from various sources
     try:
         docs_local = SimpleDirectoryReader("./src/rags/pdf").load_data()
@@ -444,18 +433,7 @@ def build_retriever(separator=" ", chunk_size=4096, chunk_overlap=50, replace_sp
             ))
 
     # Vector store configuration
-    vs = MilvusVectorStore(
-        uri=MILVUS_URI,
-        token=MILVUS_TOKEN,
-        dim=MILVUS_DIM,
-        collection_name=collection_name or f"{MILVUS_COLLECTION_PREFIX}_default",
-        overwrite=True,
-        index_config={
-            "metric_type": "COSINE",
-            "index_type": "HNSW",
-            "params": {"M": 16, "efConstruction": 200}
-        }
-    )
+    vs = LanceDBVectorStore(uri=LANCEDB_URI, mode="overwrite", query_type="hybrid")
     sc = StorageContext.from_defaults(vector_store=vs)
     
     # Embedding model
